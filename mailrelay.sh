@@ -170,7 +170,6 @@ service lmtp {
 ssl = required
 ssl_cert = <$MAILRELAY_TLS_CERT
 ssl_key = <$MAILRELAY_TLS_KEY
-ssl_protocols = TLSv1.2 TLSv1.1 TLSv1 !SSLv3 !SSLv2
 userdb {
   args = uid=vmail gid=vmail home=$MAILRELAY_VMAIL/%d/%n
   driver = static
