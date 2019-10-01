@@ -20,7 +20,9 @@ MAILRELAY_PSQL_USER=${MAILRELAY_PSQL_USER:-postgres}
 # MAILRELAY_PSQL_PASSWORD
 MAILRELAY_DKIM_SELECTOR=${MAILRELAY_DKIM_SELECTOR:-default}
 MAILRELAY_DKIM_KEY=${MAILRELAY_DKIM_KEY:-/opt/mailrelay/dkim/privkey.pem}
+MAILRELAY_DKIM_RECORD=${MAILRELAY_DKIM_RECORD:-/opt/mailrelay/dkim/record.txt}
 # MAILRELAY_DKIM_GENERATE
+# MAILRELAY_CREATE_STUB
 
 ### Configurer
 function configure {
@@ -34,6 +36,12 @@ function configure {
     log_info "MAILRELAY_PSQL_USER:      $MAILRELAY_PSQL_USER"
     log_info "MAILRELAY_DKIM_SELECTOR:  $MAILRELAY_DKIM_SELECTOR"
     log_info "MAILRELAY_DKIM_KEY:       $MAILRELAY_DKIM_KEY"
+    
+    if [[ $MAILRELAY_CREATE_STUB == "true" ]]; then
+        log_info "Creating stub directories"
+        mkdir -p $MAILRELAY_ROOT/{tls,dkim}
+    fi
+
     log_info "Start configuring mailrelay"
     configure_postfix
     configure_dovecot
@@ -83,7 +91,8 @@ function configure_opendkim {
     if [[ $MAILRELAY_DKIM_GENERATE == "true" && ! -f $MAILRELAY_DKIM_KEY ]]; then
         log_info "  Generating DKIM private key file"
         opendkim-genkey -b 2048 -D /tmp -d $HOSTNAME -s $MAILRELAY_DKIM_SELECTOR
-        mv /tmp/privkey.pem $MAILRELAY_DKIM_KEY
+        mv /tmp/$MAILRELAY_DKIM_SELECTOR.private $MAILRELAY_DKIM_KEY
+        mv /tmp/$MAILRELAY_DKIM_SELECTOR.txt $MAILRELAY_DKIM_RECORD
     fi
     generate_opendkim_conf
     log_info "  Done configuring opendkim"
