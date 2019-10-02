@@ -21,7 +21,6 @@ MAILRELAY_DKIM_KEY=${MAILRELAY_DKIM_KEY:-/opt/mailrelay/dkim/privkey.pem}
 MAILRELAY_DKIM_RECORD=${MAILRELAY_DKIM_RECORD:-/opt/mailrelay/dkim/record.txt}
 # MAILRELAY_DKIM_GENERATE
 # MAILRELAY_CREATE_STUB
-MAILRELAY_PSQL_HOST_IP=`getent hosts $MAILRELAY_PSQL_HOST | awk '{ printf $1 }'`
 
 ### Configurer
 function configure {
@@ -31,7 +30,7 @@ function configure {
     log_info "MAILRELAY_VMAIL:          $MAILRELAY_VMAIL"
     log_info "MAILRELAY_TLS_CERT:       $MAILRELAY_TLS_CERT"
     log_info "MAILRELAY_TLS_KEY:        $MAILRELAY_TLS_KEY"
-    log_info "MAILRELAY_PSQL_HOST:      $MAILRELAY_PSQL_HOST ($MAILRELAY_PSQL_HOST_IP)"
+    log_info "MAILRELAY_PSQL_HOST:      $MAILRELAY_PSQL_HOST"
     log_info "MAILRELAY_PSQL_DB:        $MAILRELAY_PSQL_DB"
     log_info "MAILRELAY_PSQL_USER:      $MAILRELAY_PSQL_USER"
     log_info "MAILRELAY_DKIM_SELECTOR:  $MAILRELAY_DKIM_SELECTOR"
@@ -132,7 +131,7 @@ EOF
 
 function generate_postfix_pgsql_map {
 cat << EOF > "/etc/postfix/$1"
-hosts = $MAILRELAY_PSQL_HOST_IP
+hosts = $MAILRELAY_PSQL_HOST
 dbname = $MAILRELAY_PSQL_DB
 user = $MAILRELAY_PSQL_USER
 password = $MAILRELAY_PSQL_PASSWORD
@@ -212,6 +211,26 @@ Socket local:/var/spool/postfix/opendkim/opendkim.sock
 EOF
 }
 
+function generate_hosts {
+# Somehow postfix doesn't always resolve hostnames correctly, example error:
+# Postfix: could not translate host name "postgres" to address: System error?
+# When it's defined in the hosts file it works.
+# It may have something to do with Docker's embedded DNS server.
+# TODO: Fix this workaround
+
+> /etc/hosts
+cat << EOF > /etc/hosts
+127.0.0.1 localhost
+::1 localhost ip6-localhost ip6-loopback
+fe00::0	ip6-localnet
+ff00::0	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+`getent hosts $HOSTNAME`
+`getent hosts $MAILRELAY_PSQL_HOST`
+EOF
+}
+
 ### Utilities
 function _log {
     echo -e "$(date --rfc-3339=seconds) [mailrelay] $1: $2"
@@ -250,6 +269,9 @@ fi
 check_file "TLS certificate" $MAILRELAY_TLS_CERT
 check_file "TLS private key" $MAILRELAY_TLS_KEY
 check_file "DKIM private key" $MAILRELAY_DKIM_KEY
+
+# Generate hosts file
+generate_hosts
 
 # Wait for dependency services to come up
 sleep 5

@@ -10,6 +10,7 @@ services:
     networks:
      - overlay
 
+
   mailrelay:
     build: .
     image: semrekkers/mailrelay:latest
