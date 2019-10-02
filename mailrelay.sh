@@ -5,13 +5,11 @@ set -e -o pipefail
 ### Constants
 MAILRELAY_LIB=/var/lib/mailrelay
 MAILRELAY_CONFIGURED_FILE=$MAILRELAY_LIB/.configured
-MAILRELAY_VMAIL=/var/vmail
-
-mkdir -p $MAILRELAY_LIB
 
 ### Environment
 TZ=${TZ:-Etc/UTC}
 MAILRELAY_ROOT=${MAILRELAY_ROOT:-/opt/mailrelay}
+MAILRELAY_VMAIL=${MAILRELAY_VMAIL:-$MAILRELAY_ROOT/vmail}
 MAILRELAY_TLS_CERT=${MAILRELAY_TLS_CERT:-$MAILRELAY_ROOT/tls/cert.pem}
 MAILRELAY_TLS_KEY=${MAILRELAY_TLS_KEY:-$MAILRELAY_ROOT/tls/privkey.pem}
 MAILRELAY_PSQL_HOST=${MAILRELAY_PSQL_HOST:-postgres}
@@ -23,24 +21,34 @@ MAILRELAY_DKIM_KEY=${MAILRELAY_DKIM_KEY:-/opt/mailrelay/dkim/privkey.pem}
 MAILRELAY_DKIM_RECORD=${MAILRELAY_DKIM_RECORD:-/opt/mailrelay/dkim/record.txt}
 # MAILRELAY_DKIM_GENERATE
 # MAILRELAY_CREATE_STUB
+MAILRELAY_PSQL_HOST_IP=`getent hosts $MAILRELAY_PSQL_HOST | awk '{ printf $1 }'`
 
 ### Configurer
 function configure {
     log_info "HOSTNAME:                 $HOSTNAME"
     log_info "TZ:                       $TZ"
     log_info "MAILRELAY_ROOT:           $MAILRELAY_ROOT"
+    log_info "MAILRELAY_VMAIL:          $MAILRELAY_VMAIL"
     log_info "MAILRELAY_TLS_CERT:       $MAILRELAY_TLS_CERT"
     log_info "MAILRELAY_TLS_KEY:        $MAILRELAY_TLS_KEY"
-    log_info "MAILRELAY_PSQL_HOST:      $MAILRELAY_PSQL_HOST"
+    log_info "MAILRELAY_PSQL_HOST:      $MAILRELAY_PSQL_HOST ($MAILRELAY_PSQL_HOST_IP)"
     log_info "MAILRELAY_PSQL_DB:        $MAILRELAY_PSQL_DB"
     log_info "MAILRELAY_PSQL_USER:      $MAILRELAY_PSQL_USER"
     log_info "MAILRELAY_DKIM_SELECTOR:  $MAILRELAY_DKIM_SELECTOR"
     log_info "MAILRELAY_DKIM_KEY:       $MAILRELAY_DKIM_KEY"
+    log_info "MAILRELAY_DKIM_RECORD:    $MAILRELAY_DKIM_RECORD"
+    log_info "MAILRELAY_DKIM_GENERATE:  $MAILRELAY_DKIM_GENERATE"
+    log_info "MAILRELAY_CREATE_STUB:    $MAILRELAY_CREATE_STUB"
     
     if [[ $MAILRELAY_CREATE_STUB == "true" ]]; then
         log_info "Creating stub directories"
         mkdir -p $MAILRELAY_ROOT/{tls,dkim}
     fi
+
+    log_info "Creating user vmail"
+    groupadd -g 5000 vmail
+    useradd -g vmail -u 5000 vmail -d $MAILRELAY_VMAIL
+    chown vmail:vmail $MAILRELAY_VMAIL
 
     log_info "Start configuring mailrelay"
     configure_postfix
@@ -70,12 +78,12 @@ function configure_postfix {
     postconf -e "virtual_alias_maps = pgsql:/etc/postfix/pgsql-virtual-alias-maps.cf"
     postconf -e "milter_protocol = 6"
     postconf -e "milter_default_action = accept"
-    postconf -e "smtpd_milters = inet:localhost:12301"
-    postconf -e "non_smtpd_milters = inet:localhost:12301"
+    postconf -e "smtpd_milters = unix:opendkim/opendkim.sock"
+    postconf -e "non_smtpd_milters = \$smtpd_milters"
 
     generate_postfix_pgsql_map "pgsql-virtual-mailbox-domains.cf" "SELECT 1 FROM domains WHERE name = '%s'"
     generate_postfix_pgsql_map "pgsql-virtual-mailbox-maps.cf" "SELECT 1 FROM users WHERE email = '%s' AND active = true AND send_only = false"
-    generate_postfix_pgsql_map "pgsql-virtual-alias-maps.cf" "SELECT destination FROM virtual_aliases WHERE source = '%s'"
+    generate_postfix_pgsql_map "pgsql-virtual-alias-maps.cf" "SELECT destination FROM aliases WHERE source = '%s'"
     log_info "  Done configuring postfix"
 }
 
@@ -88,6 +96,8 @@ function configure_dovecot {
 
 function configure_opendkim {
     log_info "  Configuring opendkim"
+    mkdir -p /var/spool/postfix/opendkim
+    chown opendkim:opendkim /var/spool/postfix/opendkim
     if [[ $MAILRELAY_DKIM_GENERATE == "true" && ! -f $MAILRELAY_DKIM_KEY ]]; then
         log_info "  Generating DKIM private key file"
         opendkim-genkey -b 2048 -D /tmp -d $HOSTNAME -s $MAILRELAY_DKIM_SELECTOR
@@ -95,13 +105,14 @@ function configure_opendkim {
         mv /tmp/$MAILRELAY_DKIM_SELECTOR.txt $MAILRELAY_DKIM_RECORD
     fi
     generate_opendkim_conf
+    # echo 'SOCKET="local:/var/spool/postfix/opendkim/opendkim.sock"' > /etc/default/opendkim
     log_info "  Done configuring opendkim"
 }
 
 ### File generators
 function generate_postfix_pgsql_map {
 cat << EOF > "/etc/postfix/$1"
-hosts = $MAILRELAY_PSQL_HOST
+hosts = $MAILRELAY_PSQL_HOST_IP
 dbname = $MAILRELAY_PSQL_DB
 user = $MAILRELAY_PSQL_USER
 password = $MAILRELAY_PSQL_PASSWORD
@@ -114,32 +125,12 @@ cat << EOF > "/etc/dovecot/dovecot.conf"
 auth_mechanisms = plain login
 mail_location = maildir:$MAILRELAY_VMAIL/%d/%n
 mail_privileged_group = mail
-namespace inbox {
-  inbox = yes
-  location = 
-  mailbox Drafts {
-    special_use = \Drafts
-  }
-  mailbox Junk {
-    special_use = \Junk
-  }
-  mailbox Sent {
-    special_use = \Sent
-  }
-  mailbox "Sent Messages" {
-    special_use = \Sent
-  }
-  mailbox Trash {
-    special_use = \Trash
-  }
-  prefix = 
-}
 passdb {
   args = /etc/dovecot/dovecot-sql.conf.ext
   driver = sql
 }
 postmaster_address = postmaster@%d
-protocols = " imap lmtp pop3"
+protocols = lmtp pop3
 service auth-worker {
   user = vmail
 }
@@ -154,11 +145,6 @@ service auth {
     user = vmail
   }
   user = dovecot
-}
-service imap-login {
-  inet_listener imap {
-    port = 0
-  }
 }
 service lmtp {
   unix_listener /var/spool/postfix/private/dovecot-lmtp {
@@ -202,7 +188,7 @@ Mode s
 PidFile /var/run/opendkim/opendkim.pid
 SignatureAlgorithm rsa-sha256
 UserID opendkim:opendkim
-Socket inet:12301@localhost
+Socket local:/var/spool/postfix/opendkim/opendkim.sock
 EOF
 }
 
@@ -233,6 +219,7 @@ function check_file {
 
 ### Main
 log_info "Mailrelay starting up"
+mkdir -p $MAILRELAY_LIB
 if [[ ! -f $MAILRELAY_CONFIGURED_FILE ]]; then
     log_info "Mailrelay is not configured yet"
     configure
@@ -243,6 +230,9 @@ fi
 check_file "TLS certificate" $MAILRELAY_TLS_CERT
 check_file "TLS private key" $MAILRELAY_TLS_KEY
 check_file "DKIM private key" $MAILRELAY_DKIM_KEY
+
+# Wait for dependency services to come up
+sleep 5
 
 # Starting services
 log_info "Starting rsyslogd"

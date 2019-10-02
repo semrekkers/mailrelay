@@ -32,3 +32,7 @@ CREATE TABLE aliases (
 );
 
 CREATE INDEX ON aliases(source);
+
+-- Uncomment this to create a test account (Username: test@mailrelay.local, Password: HelloWorld).
+-- INSERT INTO domains VALUES (1, 'mailrelay.local');
+-- INSERT INTO users (domain_id, email, password_hash) VALUES (1, 'test@mailrelay.local', '$2a$07$3s5vAlVi41N15imV4zARpeVD3ePLXOZi3vNklb8..bdPx0OadlEU2');
