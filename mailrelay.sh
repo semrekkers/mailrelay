@@ -105,7 +105,7 @@ function configure_opendkim {
         mv /tmp/$MAILRELAY_DKIM_SELECTOR.txt $MAILRELAY_DKIM_RECORD
     fi
     generate_opendkim_conf
-    # echo 'SOCKET="local:/var/spool/postfix/opendkim/opendkim.sock"' > /etc/default/opendkim
+    usermod -a -G opendkim postfix
     log_info "  Done configuring opendkim"
 }
 
@@ -175,7 +175,7 @@ EOF
 function generate_opendkim_conf {
 cat << EOF > "/etc/opendkim.conf"
 Syslog true
-UMask 007
+UMask 002
 OversignHeaders From
 SyslogSuccess true
 LogWhy true
