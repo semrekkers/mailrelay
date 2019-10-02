@@ -1,0 +1,35 @@
+# This is an example docker compose file.
+
+version: "3.7"
+
+services:
+  postgres:
+    image: postgres:12-alpine
+    volumes:
+     - db-data:/var/lib/postgresql
+    networks:
+     - overlay
+
+  mailrelay:
+    build: .
+    image: semrekkers/mailrelay:latest
+    init: true
+    environment:
+      TZ: Europe/Amsterdam
+      MAILRELAY_VMAIL: /var/mail
+      MAILRELAY_TLS_CERT: /etc/dovecot/private/dovecot.pem
+      MAILRELAY_TLS_KEY: /etc/dovecot/private/dovecot.key
+      MAILRELAY_DKIM_GENERATE: "true"
+      MAILRELAY_CREATE_STUB: "true"
+    ports:
+     - "465:465"
+     - "995:995"
+
+    networks:
+     - overlay
+
+volumes:
+  db-data:
+
+networks:
+  overlay:
