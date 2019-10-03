@@ -79,6 +79,9 @@ function configure_postfix {
     postconf -e "milter_default_action = accept"
     postconf -e "smtpd_milters = unix:opendkim/opendkim.sock"
     postconf -e "non_smtpd_milters = \$smtpd_milters"
+    postconf -e "disable_vrfy_command = yes"
+    postconf -e "smtpd_helo_required = yes"
+    postconf -e "smtpd_banner = \$myhostname ESMTP"
 
     append_postfix_master_cf
 
@@ -144,6 +147,7 @@ cat << EOF > "/etc/dovecot/dovecot.conf"
 auth_mechanisms = plain login
 mail_location = maildir:$MAILRELAY_VMAIL/%d/%n
 mail_privileged_group = mail
+login_greeting = Ready.
 passdb {
   args = /etc/dovecot/dovecot-sql.conf.ext
   driver = sql
@@ -203,7 +207,7 @@ Canonicalization relaxed/simple
 Domain dsn:pgsql://$MAILRELAY_PSQL_USER:$MAILRELAY_PSQL_PASSWORD@$MAILRELAY_PSQL_HOST/$MAILRELAY_PSQL_DB/table=domains?datacol=name?keycol=name
 KeyFile $MAILRELAY_DKIM_KEY
 Selector $MAILRELAY_DKIM_SELECTOR
-Mode s
+Mode sv
 PidFile /var/run/opendkim/opendkim.pid
 SignatureAlgorithm rsa-sha256
 UserID opendkim:opendkim
