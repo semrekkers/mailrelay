@@ -16,7 +16,8 @@ services:
     image: semrekkers/mailrelay:latest
     init: true
     environment:
-      TZ: Europe/Amsterdam
+      TZ: ${TZ:-Etc/UTC}
+      HOSTNAME: ${HOSTNAME:-mailrelay.local}
       MAILRELAY_VMAIL: /var/mail
       MAILRELAY_TLS_CERT: /etc/dovecot/private/dovecot.pem
       MAILRELAY_TLS_KEY: /etc/dovecot/private/dovecot.key
