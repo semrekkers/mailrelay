@@ -240,6 +240,14 @@ function check_file {
     fi
 }
 
+function check_dir {
+    if [[ ! -d $2 ]]; then
+        log_err "Directory '$2' doesn't exist, this must be the $1 directory"
+        log_err "Make sure your mappings are OK and check your configuration"
+        exit 1
+    fi
+}
+
 ### Main
 log_info "Mailrelay starting up"
 mkdir -p $MAILRELAY_LIB
@@ -253,6 +261,7 @@ fi
 check_file "TLS certificate" $MAILRELAY_TLS_CERT
 check_file "TLS private key" $MAILRELAY_TLS_KEY
 check_file "DKIM private key" $MAILRELAY_DKIM_KEY
+check_dir "virtual mailboxes" $MAILRELAY_VMAIL
 
 # Wait for dependency services to come up
 sleep 5
