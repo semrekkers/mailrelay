@@ -41,7 +41,7 @@ function configure {
     
     if [[ $MAILRELAY_CREATE_STUB == "true" ]]; then
         log_info "Creating stub directories"
-        mkdir -p $MAILRELAY_ROOT/{tls,dkim}
+        mkdir -p $MAILRELAY_ROOT/{tls,dkim,vmail}
     fi
 
     log_info "Creating user vmail"

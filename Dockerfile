@@ -17,5 +17,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-ins
 COPY mailrelay.sh /usr/local/bin/
 COPY LICENSE VERSION /
 
+VOLUME [ "/opt/mailrelay" ]
+
 ENTRYPOINT [ "mailrelay.sh" ]
 EXPOSE 25 465 587 995

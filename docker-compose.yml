@@ -18,7 +18,6 @@ services:
     environment:
       TZ: ${TZ:-Etc/UTC}
       HOSTNAME: ${HOSTNAME:-mailrelay.local}
-      MAILRELAY_VMAIL: /var/mail
       MAILRELAY_TLS_CERT: /etc/dovecot/private/dovecot.pem
       MAILRELAY_TLS_KEY: /etc/dovecot/private/dovecot.key
       MAILRELAY_DKIM_GENERATE: "true"
