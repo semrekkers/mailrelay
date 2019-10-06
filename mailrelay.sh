@@ -278,6 +278,8 @@ postfix start-fg &
 
 log_info "All services are running"
 
+exec "$@"
+
 # Wait for a service to stop
 wait -n
 EXIT_CODE=$?
