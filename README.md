@@ -18,7 +18,7 @@ Coming soon
 
 | Name                    | Description                                               | Default value                     |
 | ----------------------- | --------------------------------------------------------- | --------------------------------- |
-| TZ                      | Timezone name*                                            | `Etc/UTC`                         |
+| TZ                      | [Timezone name][1]                                        | `Etc/UTC`                         |
 | HOSTNAME                | Hostname                                                  |                                   |
 | MAILRELAY_ROOT          | Root directory for static configuration                   | `/opt/mailrelay`                  |
 | MAILRELAY_VMAIL         | Virtual mail directory                                    | `/opt/mailrelay/vmail`            |
@@ -34,7 +34,7 @@ Coming soon
 | MAILRELAY_DKIM_GENERATE | Generate DKIM key pair when `true`                        |                                   |
 | MAILRELAY_CREATE_STUB   | Create stub directories (vmail, tls and dkim) when `true` |                                   |
 
-_* This is a TZ timezone name, a list can be found [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)._
+[1]: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 ## Contributions and issues
 
