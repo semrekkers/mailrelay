@@ -146,7 +146,7 @@ function generate_dovecot_conf {
 cat << EOF > "/etc/dovecot/dovecot.conf"
 auth_mechanisms = plain login
 mail_location = maildir:$MAILRELAY_VMAIL/%d/%n
-mail_privileged_group = mail
+mail_privileged_group = vmail
 login_greeting = Ready.
 passdb {
   args = /etc/dovecot/dovecot-sql.conf.ext
