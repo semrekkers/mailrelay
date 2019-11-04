@@ -272,6 +272,19 @@ check_file "TLS private key" $MAILRELAY_TLS_KEY
 check_file "DKIM private key" $MAILRELAY_DKIM_KEY
 check_dir "virtual mailboxes" $MAILRELAY_VMAIL
 
+# FIXME: Somehow the services and resolv.conf files are not always available in a Postfix chroot jail.
+# For now, the user will be warned and the error will be (temporarily) fixed.
+if [[ ! -f "/var/spool/postfix/etc/services" ]]; then
+	# Copy the file so that its accessible inside the chroot jail.
+	cp /etc/services /var/spool/postfix/etc/services
+	log_warn "Fixed /etc/services file for Postfix chroot jail"
+fi
+if [[ ! -f "/var/spool/postfix/etc/resolv.conf" ]]; then
+	# Copy the file so that its accessible inside the chroot jail.
+	cp /etc/resolv.conf /var/spool/postfix/etc/resolv.conf
+	log_warn "Fixed /etc/resolv.conf file for Postfix chroot jail"
+fi
+
 # Wait for dependency services to come up
 sleep 5
 
