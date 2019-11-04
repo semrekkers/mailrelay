@@ -261,6 +261,10 @@ if [[ -f "/run/rsyslogd.pid" ]]; then
 	log_warn "Rsyslog wasn't gracefully shutdown, removing pid file"
 	rm -f "/run/rsyslogd.pid"
 fi
+if [[ -f "/var/run/dovecot/master.pid" ]]; then
+	log_warn "Dovecot wasn't gracefully shutdown, removing pid file"
+	rm -f "/var/run/dovecot/master.pid"
+fi
 
 # Checks
 check_file "TLS certificate" $MAILRELAY_TLS_CERT
