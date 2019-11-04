@@ -44,9 +44,7 @@ function configure {
         mkdir -p $MAILRELAY_ROOT/{tls,dkim,vmail}
     fi
 
-    log_info "Creating user vmail"
-    groupadd -g 5000 vmail
-    useradd -g vmail -u 5000 vmail -d $MAILRELAY_VMAIL
+    log_info "Chown vmail directory"
     chown vmail:vmail $MAILRELAY_VMAIL
 
     log_info "Start configuring mailrelay"

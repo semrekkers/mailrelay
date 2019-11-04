@@ -14,6 +14,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-ins
     libopendbx1-pgsql=1.4.6-13+b1 \
     && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir /var/vmail && groupadd -g 5000 vmail && useradd -g vmail -u 5000 vmail -d /var/vmail
+
 COPY mailrelay.sh /usr/local/bin/
 COPY LICENSE VERSION /
 
