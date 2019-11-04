@@ -22,6 +22,8 @@ MAILRELAY_DKIM_RECORD=${MAILRELAY_DKIM_RECORD:-/opt/mailrelay/dkim/record.txt}
 # MAILRELAY_DKIM_GENERATE
 # MAILRELAY_CREATE_STUB
 
+MAILRELAY_VERSION=`cat /VERSION`
+
 ### Configurer
 function configure {
     log_info "HOSTNAME:                 $HOSTNAME"
@@ -247,12 +249,17 @@ function check_dir {
 }
 
 ### Main
-log_info "Mailrelay starting up"
+log_info "Mailrelay ($MAILRELAY_VERSION) starting up"
 mkdir -p $MAILRELAY_LIB
 if [[ ! -f $MAILRELAY_CONFIGURED_FILE ]]; then
     log_info "Mailrelay is not configured yet"
     configure
     touch $MAILRELAY_CONFIGURED_FILE
+fi
+
+if [[ -f "/run/rsyslogd.pid" ]]; then
+	log_warn "Rsyslog wasn't gracefully shutdown, removing pid file"
+	rm -f "/run/rsyslogd.pid"
 fi
 
 # Checks
