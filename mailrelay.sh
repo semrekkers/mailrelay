@@ -22,6 +22,8 @@ MAILRELAY_DKIM_RECORD=${MAILRELAY_DKIM_RECORD:-/opt/mailrelay/dkim/record.txt}
 # MAILRELAY_DKIM_GENERATE
 # MAILRELAY_CREATE_STUB
 
+MAILRELAY_VERSION=`cat /VERSION`
+
 ### Configurer
 function configure {
     log_info "HOSTNAME:                 $HOSTNAME"
@@ -44,9 +46,7 @@ function configure {
         mkdir -p $MAILRELAY_ROOT/{tls,dkim,vmail}
     fi
 
-    log_info "Creating user vmail"
-    groupadd -g 5000 vmail
-    useradd -g vmail -u 5000 vmail -d $MAILRELAY_VMAIL
+    log_info "Chown vmail directory"
     chown vmail:vmail $MAILRELAY_VMAIL
 
     log_info "Start configuring mailrelay"
@@ -82,6 +82,7 @@ function configure_postfix {
     postconf -e "disable_vrfy_command = yes"
     postconf -e "smtpd_helo_required = yes"
     postconf -e "smtpd_banner = \$myhostname ESMTP"
+    postconf -e "message_size_limit = 25600000"
 
     append_postfix_master_cf
 
@@ -146,7 +147,7 @@ function generate_dovecot_conf {
 cat << EOF > "/etc/dovecot/dovecot.conf"
 auth_mechanisms = plain login
 mail_location = maildir:$MAILRELAY_VMAIL/%d/%n
-mail_privileged_group = mail
+mail_privileged_group = vmail
 login_greeting = Ready.
 passdb {
   args = /etc/dovecot/dovecot-sql.conf.ext
@@ -249,7 +250,7 @@ function check_dir {
 }
 
 ### Main
-log_info "Mailrelay starting up"
+log_info "Mailrelay ($MAILRELAY_VERSION) starting up"
 mkdir -p $MAILRELAY_LIB
 if [[ ! -f $MAILRELAY_CONFIGURED_FILE ]]; then
     log_info "Mailrelay is not configured yet"
@@ -257,11 +258,33 @@ if [[ ! -f $MAILRELAY_CONFIGURED_FILE ]]; then
     touch $MAILRELAY_CONFIGURED_FILE
 fi
 
+if [[ -f "/run/rsyslogd.pid" ]]; then
+	log_warn "Rsyslog wasn't gracefully shutdown, removing pid file"
+	rm -f "/run/rsyslogd.pid"
+fi
+if [[ -f "/var/run/dovecot/master.pid" ]]; then
+	log_warn "Dovecot wasn't gracefully shutdown, removing pid file"
+	rm -f "/var/run/dovecot/master.pid"
+fi
+
 # Checks
 check_file "TLS certificate" $MAILRELAY_TLS_CERT
 check_file "TLS private key" $MAILRELAY_TLS_KEY
 check_file "DKIM private key" $MAILRELAY_DKIM_KEY
 check_dir "virtual mailboxes" $MAILRELAY_VMAIL
+
+# FIXME: Somehow the services and resolv.conf files are not always available in a Postfix chroot jail.
+# For now, the user will be warned and the error will be (temporarily) fixed.
+if [[ ! -f "/var/spool/postfix/etc/services" ]]; then
+	# Copy the file so that its accessible inside the chroot jail.
+	cp /etc/services /var/spool/postfix/etc/services
+	log_warn "Fixed /etc/services file for Postfix chroot jail"
+fi
+if [[ ! -f "/var/spool/postfix/etc/resolv.conf" ]]; then
+	# Copy the file so that its accessible inside the chroot jail.
+	cp /etc/resolv.conf /var/spool/postfix/etc/resolv.conf
+	log_warn "Fixed /etc/resolv.conf file for Postfix chroot jail"
+fi
 
 # Wait for dependency services to come up
 sleep 5
