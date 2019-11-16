@@ -3,8 +3,8 @@ LABEL maintainer="Sem Rekkers <rekkers.sem@gmail.com>"
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
     rsyslog=8.1901.0-1 \
-    postfix=3.4.5-1 \
-    postfix-pgsql=3.4.5-1 \
+    postfix=3.4.7-0+deb10u1 \
+    postfix-pgsql=3.4.7-0+deb10u1 \
     dovecot-core=1:2.3.4.1-5+deb10u1 \
     dovecot-pgsql=1:2.3.4.1-5+deb10u1 \
     dovecot-lmtpd=1:2.3.4.1-5+deb10u1 \
