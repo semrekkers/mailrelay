@@ -82,6 +82,7 @@ function configure_postfix {
     postconf -e "disable_vrfy_command = yes"
     postconf -e "smtpd_helo_required = yes"
     postconf -e "smtpd_banner = \$myhostname ESMTP"
+    postconf -e "message_size_limit = 25600000"
 
     append_postfix_master_cf
 
