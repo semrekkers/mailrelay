@@ -22,7 +22,7 @@ MAILRELAY_DKIM_RECORD=${MAILRELAY_DKIM_RECORD:-/opt/mailrelay/dkim/record.txt}
 # MAILRELAY_DKIM_GENERATE
 # MAILRELAY_CREATE_STUB
 
-MAILRELAY_VERSION=`cat /VERSION`
+MAILRELAY_VERSION=$(cat /VERSION)
 
 ### Configurer
 function configure {
@@ -43,11 +43,11 @@ function configure {
     
     if [[ $MAILRELAY_CREATE_STUB == "true" ]]; then
         log_info "Creating stub directories"
-        mkdir -p $MAILRELAY_ROOT/{tls,dkim,vmail}
+        mkdir -p "$MAILRELAY_ROOT"/{tls,dkim,vmail}
     fi
 
     log_info "Chown vmail directory"
-    chown vmail:vmail $MAILRELAY_VMAIL
+    chown vmail:vmail "$MAILRELAY_VMAIL"
 
     log_info "Start configuring mailrelay"
     configure_postfix
@@ -105,9 +105,9 @@ function configure_opendkim {
     chown opendkim:opendkim /var/spool/postfix/opendkim
     if [[ $MAILRELAY_DKIM_GENERATE == "true" && ! -f $MAILRELAY_DKIM_KEY ]]; then
         log_info "  Generating DKIM private key file"
-        opendkim-genkey -b 2048 -D /tmp -d $HOSTNAME -s $MAILRELAY_DKIM_SELECTOR
-        mv /tmp/$MAILRELAY_DKIM_SELECTOR.private $MAILRELAY_DKIM_KEY
-        mv /tmp/$MAILRELAY_DKIM_SELECTOR.txt $MAILRELAY_DKIM_RECORD
+        opendkim-genkey -b 2048 -D /tmp -d "$HOSTNAME" -s "$MAILRELAY_DKIM_SELECTOR"
+        mv "/tmp/$MAILRELAY_DKIM_SELECTOR.private" "$MAILRELAY_DKIM_KEY"
+        mv "/tmp/$MAILRELAY_DKIM_SELECTOR.txt" "$MAILRELAY_DKIM_RECORD"
     fi
     generate_opendkim_conf
     usermod -a -G opendkim postfix
@@ -268,10 +268,10 @@ if [[ -f "/var/run/dovecot/master.pid" ]]; then
 fi
 
 # Checks
-check_file "TLS certificate" $MAILRELAY_TLS_CERT
-check_file "TLS private key" $MAILRELAY_TLS_KEY
-check_file "DKIM private key" $MAILRELAY_DKIM_KEY
-check_dir "virtual mailboxes" $MAILRELAY_VMAIL
+check_file "TLS certificate" "$MAILRELAY_TLS_CERT"
+check_file "TLS private key" "$MAILRELAY_TLS_KEY"
+check_file "DKIM private key" "$MAILRELAY_DKIM_KEY"
+check_dir "virtual mailboxes" "$MAILRELAY_VMAIL"
 
 # FIXME: Somehow the services and resolv.conf files are not always available in a Postfix chroot jail.
 # For now, the user will be warned and the error will be (temporarily) fixed.
@@ -301,7 +301,7 @@ postfix start-fg &
 
 log_info "All services are running"
 
-exec "$@"
+"$@"
 
 # Wait for a service to stop
 wait -n
